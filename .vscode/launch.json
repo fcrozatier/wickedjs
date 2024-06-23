@@ -1,0 +1,19 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Debug Current File",
+			"type": "node",
+			"request": "launch",
+			"autoAttachChildProcesses": true,
+			"skipFiles": [
+				"<node_internals>/**",
+				"${workspaceFolder}/node_modules/**"
+			],
+			"program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+			"args": ["run", "${relativeFile}"],
+			"smartStep": true,
+			"console": "integratedTerminal"
+		}
+	]
+}
