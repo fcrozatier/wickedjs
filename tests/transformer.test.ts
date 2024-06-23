@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { describe, expect, it, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { transform } from "../src/transformer.js";
 
 test.each([
@@ -14,9 +14,10 @@ test.each([
 		'let y = { get() { return eval(this.expr); }, expr: "x.get() + 1" };',
 	],
 	["reassign identifier", "x = z + 2;", 'x.expr = "z.get() + 2";'],
+	["self reassignment", "x = x + 1", "x.expr = `${x.expr} + 1`;"],
 	// ["update identifier", "x += z + 2;", 'x.expr += "z.get() + 2";'], Need to change += semantics
 	["expression statement", "x + 1", "x.get() + 1"],
-])("transform %s", async (_desc, before, after) => {
+])("transform %s", (_desc, before, after) => {
 	const expanded = transform({
 		content: before,
 		filename: "file.svelte.ts",
@@ -25,12 +26,16 @@ test.each([
 	expect(expanded.trim()).toEqual(after);
 });
 
-const filename = "reactivity.ts";
-const content = readFileSync(`./tests/${filename}`, { encoding: "utf8" });
-
 describe("reactivity", () => {
-	it("is reactive", () => {
+	test.each([
+		["derived", 3],
+		["self-assignment", 4],
+	])("run %s", (filename, result) => {
+		const content = readFileSync(`./tests/reactivity/${filename}.js`, {
+			encoding: "utf8",
+		});
 		const code = transform({ filename, content });
-		expect(eval(code)).toEqual(3);
+
+		expect(eval(code)).toEqual(result);
 	});
 });
