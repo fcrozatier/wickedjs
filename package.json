@@ -1,9 +1,9 @@
 {
 	"name": "reactivejs",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"type": "module",
 	"description": "",
-	"main": "./build/index.js",
+	"main": "./build/transformer.js",
 	"scripts": {
 		"build": "tsc",
 		"postpublish": "git push --follow-tags",
@@ -13,7 +13,7 @@
 	},
 	"keywords": [],
 	"author": "",
-	"license": "",
+	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^20.14.8",
 		"@typescript-eslint/eslint-plugin": "^6.21.0",
