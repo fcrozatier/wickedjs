@@ -17,21 +17,23 @@ test.each([
 	["self reassignment", "x = x + 1", "x.expr = `${x.expr} + 1`;"],
 	// ["update identifier", "x += z + 2;", 'x.expr += "z.get() + 2";'], Need to change += semantics
 	["expression statement", "x + 1", "x.get() + 1"],
+	["call expression", "f(x);", "f(x);"],
 ])("transform %s", (_desc, before, after) => {
-	const expanded = transform({
+	const transformed = transform({
 		content: before,
-		filename: "file.svelte.ts",
+		filename: "file.ts",
 	});
 
-	expect(expanded.trim()).toEqual(after);
+	expect(transformed.trim()).toEqual(after);
 });
 
 describe("reactivity", () => {
 	test.each([
-		["derived", 3],
-		["self-assignment", 4],
+		["a-derived.js", 3],
+		["b-self-assignment.js", 4],
+		// ["c-function-boundary.js", 4],
 	])("run %s", (filename, result) => {
-		const content = readFileSync(`./tests/reactivity/${filename}.js`, {
+		const content = readFileSync(`./tests/reactivity/${filename}`, {
 			encoding: "utf8",
 		});
 		const code = transform({ filename, content });

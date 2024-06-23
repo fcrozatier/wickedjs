@@ -104,6 +104,10 @@ export const transform = ({
 				}),
 			);
 		} else if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left)) {
+			if (node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
+				throw new Error(`WickedJS: unsupported operator`);
+			}
+
 			// reassignments
 
 			const expression = toString(
@@ -170,6 +174,9 @@ export const transform = ({
 				node.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
 			)
 		) {
+			if (ts.isCallExpression(node.expression)) {
+				return node;
+			}
 			return ts.visitNode(node.expression, getIdentifiersVisitor);
 		}
 
