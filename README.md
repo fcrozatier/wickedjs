@@ -13,7 +13,7 @@ const y = "x + 1";
 
 eval(y); // 2
 
-x += 1
+x += 1;
 
 eval(y); // 3
 ```
@@ -25,7 +25,7 @@ and takes it to the next level with a great DX
 let x = 1;
 const y = x + 1; // A derived value
 
-x += 1
+x += 1;
 
 y; // 3
 ```
@@ -40,7 +40,7 @@ Reactivity works out of the box. The Wicked language is fully reactive with no n
 let x = 1;
 const y = x + 1; // A derived value
 
-x += 1
+x += 1;
 
 y; // 3
 ```
