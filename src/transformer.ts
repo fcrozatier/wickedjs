@@ -91,18 +91,20 @@ export const transform = ({
 	const visitor: ts.Visitor = (node) => {
 		if (ts.isVariableDeclaration(node)) {
 			const initializer = node.initializer ?? undefinedKeyword();
-			return ts.factory.updateVariableDeclaration(
-				node,
-				node.name,
-				node.exclamationToken,
-				node.type,
-				createIdentifierInitializer({
-					expr: toString(
-						ts.visitNode(initializer, getIdentifiersVisitor)!,
-						source,
-					),
-				}),
-			);
+			if (!ts.isArrowFunction(initializer)) {
+				return ts.factory.updateVariableDeclaration(
+					node,
+					node.name,
+					node.exclamationToken,
+					node.type,
+					createIdentifierInitializer({
+						expr: toString(
+							ts.visitNode(initializer, getIdentifiersVisitor)!,
+							source,
+						),
+					}),
+				);
+			}
 		} else if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left)) {
 			if (node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
 				throw new Error(`WickedJS: unsupported operator`);

@@ -18,6 +18,16 @@ test.each([
 	// ["update identifier", "x += z + 2;", 'x.expr += "z.get() + 2";'], Need to change += semantics
 	["expression statement", "x + 1", "x.get() + 1"],
 	["call expression", "f(x);", "f(x);"],
+	[
+		"arrow function declaration",
+		"const one = () => { return 1; };",
+		"const one = () => { return 1; };",
+	],
+	[
+		"function body",
+		"const increment = (n) => { n = n + 1; };",
+		"const increment = (n) => { n.expr = `${n.expr} + 1`; };",
+	],
 ])("transform %s", (_desc, before, after) => {
 	const transformed = transform({
 		content: before,
@@ -31,7 +41,7 @@ describe("reactivity", () => {
 	test.each([
 		["a-derived.js", 3],
 		["b-self-assignment.js", 4],
-		// ["c-function-boundary.js", 4],
+		["c-function-boundary.js", 3],
 	])("run %s", (filename, result) => {
 		const content = readFileSync(`./tests/reactivity/${filename}`, {
 			encoding: "utf8",
