@@ -105,6 +105,53 @@ export const transform = ({
 			);
 		} else if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left)) {
 			// reassignments
+
+			const expression = toString(
+				ts.visitNode(node.right, getIdentifiersVisitor)!,
+				source,
+			);
+
+			const [head, ...rest] = expression.split(`${node.left.getText()}.get()`);
+
+			if (rest.length > 0) {
+				// Manage self-references
+				const templateSpans: ts.TemplateSpan[] = [];
+
+				for (let index = 0; index < rest.length - 1; index++) {
+					templateSpans.push(
+						ts.factory.createTemplateSpan(
+							ts.factory.createPropertyAccessExpression(
+								ts.factory.createIdentifier(node.left.getText()),
+								ts.factory.createIdentifier("expr"),
+							),
+							ts.factory.createTemplateMiddle(rest[index]!),
+						),
+					);
+				}
+				templateSpans.push(
+					ts.factory.createTemplateSpan(
+						ts.factory.createPropertyAccessExpression(
+							ts.factory.createIdentifier(node.left.getText()),
+							ts.factory.createIdentifier("expr"),
+						),
+						ts.factory.createTemplateTail(rest[rest.length - 1]!),
+					),
+				);
+
+				return ts.factory.updateBinaryExpression(
+					node,
+					ts.factory.createPropertyAccessExpression(
+						ts.factory.createIdentifier(node.left.getText()),
+						ts.factory.createIdentifier("expr"),
+					),
+					node.operatorToken,
+					ts.factory.createTemplateExpression(
+						ts.factory.createTemplateHead(head!, head!),
+						templateSpans,
+					),
+				);
+			}
+
 			return ts.factory.updateBinaryExpression(
 				node,
 				ts.factory.createPropertyAccessExpression(
