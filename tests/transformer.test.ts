@@ -15,7 +15,7 @@ test.each([
 	],
 	["reassign identifier", "x = z + 2;", 'x.expr = "z.get() + 2";'],
 	["self reassignment", "x = x + 1", "x.expr = `${x.expr} + 1`;"],
-	// ["update identifier", "x += z + 2;", 'x.expr += "z.get() + 2";'], Need to change += semantics
+	["update identifier", "x += z + 2;", 'x.expr += "z.get() + 2";'],
 	["expression statement", "x + 1", "x.get() + 1"],
 	["call expression", "f(x);", "f(x);"],
 	[

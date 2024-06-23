@@ -59,6 +59,17 @@ const undefinedKeyword = () => {
 	return ts.factory.createIdentifier("undefined");
 };
 
+const isAssignment = (node: ts.Node): node is ts.BinaryExpression => {
+	return (
+		ts.isBinaryExpression(node) &&
+		[
+			ts.SyntaxKind.EqualsToken,
+			ts.SyntaxKind.PlusEqualsToken,
+			ts.SyntaxKind.MinusEqualsToken,
+		].includes(node.operatorToken.kind)
+	);
+};
+
 export const transform = ({
 	filename,
 	content,
@@ -105,11 +116,7 @@ export const transform = ({
 					}),
 				);
 			}
-		} else if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left)) {
-			if (node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
-				throw new Error(`WickedJS: unsupported operator`);
-			}
-
+		} else if (isAssignment(node) && ts.isIdentifier(node.left)) {
 			// reassignments
 
 			const expression = toString(
@@ -171,10 +178,7 @@ export const transform = ({
 			);
 		} else if (
 			ts.isExpressionStatement(node) &&
-			!(
-				ts.isBinaryExpression(node.expression) &&
-				node.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
-			)
+			!isAssignment(node.expression)
 		) {
 			if (ts.isCallExpression(node.expression)) {
 				return node;
