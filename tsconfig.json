@@ -33,6 +33,11 @@
 		/* Completeness */
 		"skipLibCheck": true
 	},
-	"include": ["./src/**/*.ts", "./src/**/*.js"],
+	"include": [
+		"./src/**/*.ts",
+		"./src/**/*.js",
+		"./tests/**/*.ts",
+		"./tests/**/*.js"
+	],
 	"exclude": ["./node_modules/**"]
 }
