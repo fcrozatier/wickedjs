@@ -47,7 +47,7 @@ y; // 3
 
 ### Reactivity across boundaries
 
-Reactivity spans your whole project and can cross function boundaries like if values were passed by reference:
+Reactivity spans your whole project and can cross function boundaries as if values were passed by reference:
 
 ```js
 let x = 1;
@@ -62,7 +62,7 @@ increment(x); // "Passed as a reference"
 y; // 3
 ```
 
-Check out the [test]("./tests") folder for more!
+Check out the [test](./tests) folder for more!
 
 ## Just kidding
 
