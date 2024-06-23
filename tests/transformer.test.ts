@@ -39,10 +39,10 @@ test.each([
 
 describe("reactivity", () => {
 	test.each([
-		["a-derived.js", 3],
-		["b-self-assignment.js", 4],
-		["c-function-boundary.js", 3],
-	])("run %s", (filename, result) => {
+		["works with derived reassignments", "a-derived.js", 3],
+		["works with derived increments", "b-self-assignment.js", 4],
+		["crosses function boundary", "c-function-boundary.js", 3],
+	])("%s", (_desc, filename, result) => {
 		const content = readFileSync(`./tests/reactivity/${filename}`, {
 			encoding: "utf8",
 		});
