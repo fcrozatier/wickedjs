@@ -1,149 +1,65 @@
-import * as ts from "typescript";
-
-const visitor: ts.Visitor = (node) => {
-	if (ts.isVariableDeclaration(node)) {
-		const initializer = node.initializer;
-		if (initializer && ts.isNumericLiteral(initializer)) {
-		}
-	} else if (
-		ts.isCallExpression(node) &&
-		ts.isIdentifier(node.expression) &&
-		node.expression.getText() === "bind"
-	) {
-		const [object, array] = node.arguments;
-
-		if (!object || !ts.isObjectLiteralExpression(object)) {
-			throw new Error(
-				"auto-sync: bind's first argument must be an object literal",
-			);
-		}
-
-		if (array && !ts.isArrayLiteralExpression(array)) {
-			throw new Error(
-				"auto-sync: bind's second argument must be an array literal",
-			);
-		}
-
-		if (array && array.elements?.some((el) => !ts.isStringLiteral(el))) {
-			throw new Error(
-				"auto-sync: bind's second argument must be an array of string literals",
-			);
-		}
-
-		const keys: string[] =
-			array?.elements.map((e) => (e as ts.StringLiteral).text) ?? [];
-
-		const properties: ts.ObjectLiteralElementLike[] = [];
-
-		for (const property of object.properties) {
-			const setter = property.name && keys.includes(property.name.getText());
-			let name!: string;
-			let initializer!: ts.Expression;
-			let stringLiteral = false;
-
-			if (ts.isShorthandPropertyAssignment(property)) {
-				name = property.name.getText();
-				initializer = property.name;
-			} else if (ts.isPropertyAssignment(property)) {
-				if (ts.isStringLiteral(property.name)) {
-					name = property.name.text;
-					initializer = property.initializer;
-					stringLiteral = true;
-				} else if (ts.isIdentifier(property.name)) {
-					name = property.name.getText();
-					initializer = property.initializer;
-				}
-			} else {
-				// Leave accessors, spreads and methods as is
-				properties.push(property);
-				continue;
-			}
-
-			properties.push(createGetter({ name, initializer, stringLiteral }));
-			if (setter) {
-				properties.push(createSetter({ name, initializer }));
-			}
-		}
-
-		return createObjectLiteralExpression(properties);
-	}
-
-	return ts.visitEachChild(node, visitor, undefined);
-};
-
-const createGetter = ({
-	name,
-	initializer,
-	stringLiteral,
-}: {
-	name: string;
-	initializer: ts.Expression;
-	stringLiteral?: boolean;
-}) => {
-	return ts.factory.createGetAccessorDeclaration(
-		undefined,
-		stringLiteral
-			? ts.factory.createStringLiteral(name)
-			: ts.factory.createIdentifier(name),
-		[],
-		undefined,
-		ts.factory.createBlock(
-			[ts.factory.createReturnStatement(initializer)],
-			false,
-		),
-	);
-};
-
-const createSetter = ({
-	name,
-	initializer,
-}: {
-	name: string;
-	initializer: ts.Expression;
-}) => {
-	// Prevent shadowing
-	const local = ["v", "_v", "__v"].find(
-		(v) => !new Set([name, initializer]).has(v),
-	) as string;
-	const localIdentifier = ts.factory.createIdentifier(local);
-
-	return ts.factory.createSetAccessorDeclaration(
-		undefined,
-		ts.factory.createIdentifier(name),
-		[
-			ts.factory.createParameterDeclaration(
-				undefined,
-				undefined,
-				localIdentifier,
-				undefined,
-				undefined,
-				undefined,
-			),
-		],
-		ts.factory.createBlock(
-			[
-				ts.factory.createExpressionStatement(
-					ts.factory.createBinaryExpression(
-						initializer,
-						ts.factory.createToken(ts.SyntaxKind.EqualsToken),
-						localIdentifier,
-					),
-				),
-			],
-			false,
-		),
-	);
-};
-
-const createObjectLiteralExpression = (
-	properties: ts.ObjectLiteralElementLike[],
-) => {
-	return ts.factory.createObjectLiteralExpression(properties);
-};
+import ts from "typescript";
 
 const printer = ts.createPrinter();
 
-export const expand = ({
+const toString = (node: ts.Node, source: ts.SourceFile) => {
+	return printer.printNode(ts.EmitHint.Unspecified, node, source);
+};
+
+const createIdentifierInitializer = (options: { expr: string }) => {
+	return ts.factory.createObjectLiteralExpression(
+		[
+			ts.factory.createMethodDeclaration(
+				undefined,
+				undefined,
+				ts.factory.createIdentifier("get"),
+				undefined,
+				undefined,
+				[],
+				undefined,
+				ts.factory.createBlock(
+					[
+						ts.factory.createReturnStatement(
+							ts.factory.createCallExpression(
+								ts.factory.createIdentifier("eval"),
+								undefined,
+								[
+									ts.factory.createPropertyAccessExpression(
+										ts.factory.createThis(),
+										ts.factory.createIdentifier("expr"),
+									),
+								],
+							),
+						),
+					],
+					false,
+				),
+			),
+			ts.factory.createPropertyAssignment(
+				ts.factory.createIdentifier("expr"),
+				ts.factory.createStringLiteral(options.expr),
+			),
+		],
+		false,
+	);
+};
+
+const getIdenfierValue = (identifier: string) => {
+	return ts.factory.createCallExpression(
+		ts.factory.createPropertyAccessExpression(
+			ts.factory.createIdentifier(identifier),
+			ts.factory.createIdentifier("get"),
+		),
+		undefined,
+		[],
+	);
+};
+
+const undefinedKeyword = () => {
+	return ts.factory.createIdentifier("undefined");
+};
+
+export const transform = ({
 	filename,
 	content,
 }: {
@@ -161,6 +77,58 @@ export const expand = ({
 		ts.ScriptKind.TS,
 	);
 
+	// using an identifier
+	const getIdentifiersVisitor: ts.Visitor = (node: ts.Node) => {
+		if (
+			ts.isIdentifier(node) &&
+			!(ts.isVariableDeclaration(node.parent) && node.parent.name === node)
+		) {
+			return getIdenfierValue(node.getText());
+		}
+		return ts.visitEachChild(node, getIdentifiersVisitor, undefined);
+	};
+
+	const visitor: ts.Visitor = (node) => {
+		if (ts.isVariableDeclaration(node)) {
+			const initializer = node.initializer ?? undefinedKeyword();
+			return ts.factory.updateVariableDeclaration(
+				node,
+				node.name,
+				node.exclamationToken,
+				node.type,
+				createIdentifierInitializer({
+					expr: toString(
+						ts.visitNode(initializer, getIdentifiersVisitor)!,
+						source,
+					),
+				}),
+			);
+		} else if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left)) {
+			// reassignments
+			return ts.factory.updateBinaryExpression(
+				node,
+				ts.factory.createPropertyAccessExpression(
+					ts.factory.createIdentifier(node.left.getText()),
+					ts.factory.createIdentifier("expr"),
+				),
+				node.operatorToken,
+				ts.factory.createStringLiteral(
+					toString(ts.visitNode(node.right, getIdentifiersVisitor)!, source),
+				),
+			);
+		} else if (
+			ts.isExpressionStatement(node) &&
+			!(
+				ts.isBinaryExpression(node.expression) &&
+				node.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
+			)
+		) {
+			return ts.visitNode(node.expression, getIdentifiersVisitor);
+		}
+
+		return ts.visitEachChild(node, visitor, undefined);
+	};
+
 	const transformed = ts.visitNode(source, visitor);
 
 	if (!transformed)
@@ -168,5 +136,5 @@ export const expand = ({
 			`auto-sync: something went wrong when transforming module ${filename}`,
 		);
 
-	return printer.printNode(ts.EmitHint.Unspecified, transformed, source);
+	return toString(transformed, source);
 };
